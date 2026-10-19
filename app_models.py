@@ -26,6 +26,7 @@ from config import (
 
 VIEWER_MODE_ORIGINAL = "original"
 VIEWER_MODE_MASK = "mask"
+VIEWER_MODE_LABELS = "labels"
 VIEWER_MODE_OVERLAY = "overlay"
 STACK_VIEW_SLICE = "slice"
 STACK_VIEW_PROJECTION = "projection"

@@ -49,9 +49,13 @@ def build_batch_command(
     current_slice_index: int,
     tiff_png_reference_dir: Path | None = None,
 ) -> list[str]:
-    script_path = _resolve_batch_script()
+    if getattr(sys, "frozen", False):
+        command_prefix = [sys.executable, "--batch-worker"]
+    else:
+        script_path = _resolve_batch_script()
+        command_prefix = [sys.executable, str(script_path)]
 
-    args = ([str(script_path)] if getattr(sys, "frozen", False) else [sys.executable, str(script_path)]) + [
+    args = command_prefix + [
         "--img_dir", str(input_dir),
         "--ckpt_path", str(settings.checkpoint_path),
         "--out_dir", str(out_dir),
