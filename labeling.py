@@ -71,13 +71,25 @@ def colorize_labels(labeled: np.ndarray) -> np.ndarray:
     return rgb
 
 
+def save_image_unicode(path: Path, image: np.ndarray) -> None:
+    """Encode with OpenCV and write via Python to support Unicode paths."""
+    path = Path(path)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        success, encoded = cv2.imencode(path.suffix, image)
+        if not success:
+            raise OSError("OpenCV could not encode the image")
+        path.write_bytes(encoded.tobytes())
+    except (OSError, cv2.error) as exc:
+        raise OSError(f"Could not save image to {path}: {exc}") from exc
+
+
 def save_label_maps(out_dir: Path, stem: str, labeled: np.ndarray) -> None:
     directory = out_dir / "labeled_maps"
     directory.mkdir(parents=True, exist_ok=True)
     np.save(directory / f"{stem}_labels.npy", labeled.astype(np.int32), allow_pickle=False)
     rgb = colorize_labels(labeled)
-    if not cv2.imwrite(str(directory / f"{stem}_labels.png"), cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR)):
-        raise OSError("Could not save the colored droplet label map.")
+    save_image_unicode(directory / f"{stem}_labels.png", cv2.cvtColor(rgb, cv2.COLOR_RGB2BGR))
 
 
 def clear_label_maps(out_dir: Path, stem: str) -> None:

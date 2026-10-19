@@ -18,7 +18,7 @@ from tqdm import tqdm
 from config import DEFAULT_BACKGROUND_RADIUS, DEFAULT_RESIZE_SIZE, DEFAULT_THRESHOLD
 from labeling import (
     DROPLET_COLUMNS, clear_label_maps, label_droplets, measure_droplet_labels,
-    save_label_maps, split_mask_with_watershed,
+    save_label_maps, save_image_unicode, split_mask_with_watershed,
 )
 from models.model_2 import UNetDC
 from spatial_analysis import invalidate_spatial_exports
@@ -171,7 +171,7 @@ def save_debug_preprocessed_image(target: InferenceTarget, debug_dir: Path) -> N
     debug_dir.mkdir(parents=True, exist_ok=True)
     debug_rgb = np.clip(target.preprocessed_image * 255.0, 0, 255).astype(np.uint8)
     debug_bgr = cv2.cvtColor(debug_rgb, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(str(debug_dir / f"{target.output_stem}_preprocessed_input.png"), debug_bgr)
+    save_image_unicode(debug_dir / f"{target.output_stem}_preprocessed_input.png", debug_bgr)
     np.save(debug_dir / f"{target.output_stem}_preprocessed_input.npy", target.preprocessed_image)
 
 
@@ -390,11 +390,11 @@ def run_batch(
         labeled = label_droplets(mask, min_area, use_watershed=use_watershed_count)
 
         if save_masks:
-            cv2.imwrite(str(mask_dir / f"{target.output_stem}_pred.png"), mask * 255)
+            save_image_unicode(mask_dir / f"{target.output_stem}_pred.png", mask * 255)
             save_label_maps(mask_dir.parent, target.output_stem, labeled)
             source_dir = mask_dir.parent / "source_images"
             source_dir.mkdir(exist_ok=True)
-            cv2.imwrite(str(source_dir / f"{target.output_stem}.png"),
+            save_image_unicode(source_dir / f"{target.output_stem}.png",
                         cv2.cvtColor(target.rgb_image, cv2.COLOR_RGB2BGR))
         else:
             clear_label_maps(mask_dir.parent, target.output_stem)
@@ -416,7 +416,7 @@ def run_batch(
             source_bgr = cv2.cvtColor(target.rgb_image, cv2.COLOR_RGB2BGR)
             overlay = source_bgr.copy()
             overlay[mask > 0] = (0, 255, 0)
-            cv2.imwrite(str(overlay_dir / f"{target.output_stem}_overlay.png"), overlay)
+            save_image_unicode(overlay_dir / f"{target.output_stem}_overlay.png", overlay)
 
 
 def summary_with_total_row(per_image_rows: list[dict[str, object]]) -> pd.DataFrame:
