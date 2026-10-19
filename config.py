@@ -1,6 +1,15 @@
+from pathlib import Path
+import sys
+
+
+def resource_path(relative_path: str) -> Path:
+    base_path = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return base_path / relative_path
+
+
 SCRIPT_BASENAME = "quantify_droplets_batch"
 VALID_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
-DEFAULT_CHECKPOINT = "best_UNetDC_focal_model.pth"
+DEFAULT_CHECKPOINT = resource_path("best_UNetDC_focal_model.pth")
 DEFAULT_OUT_DIR = "quant_results"
 
 DEFAULT_BATCH_SIZE = 8
@@ -21,3 +30,6 @@ DEFAULT_TIFF_AS_PNG_STYLE = True
 # safest default for TIFF stacks. Max projection remains optional because a model
 # trained on ordinary 2D images may behave differently on projected inputs.
 DEFAULT_TIFF_STACK_MODE = "current_slice"
+
+DEFAULT_DENSITY_KERNEL_SIZE = 31
+DEFAULT_RADIAL_BINS = 5
