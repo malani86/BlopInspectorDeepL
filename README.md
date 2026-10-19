@@ -64,15 +64,30 @@ For TIFF stacks, useful options are:
 --tiff_mode all_slices
 --tiff_as_png_style
 ```
-for .exe
-```bash
-python -m PyInstaller --noconfirm --onefile --name quantify_droplets_batch.exe quantify_droplets_batch.py
+## Rebuild on Windows
 
-python -m PyInstaller --noconfirm --onefile --windowed \
-  --name segment_app \
-  --add-data "best_UNetDC_focal_model.pth:." \
-  main.py
+From the repository folder, with your application environment activated:
+
+```powershell
+python -m pip install -r requirements.txt
+python -m PyInstaller --noconfirm --clean segment_app.spec
 ```
+
+The trained `best_UNetDC_focal_model.pth` and `icon.ico` must be in this folder.
+Run `dist\segment_app\segment_app.exe`. Copy the **entire** `dist\segment_app`
+folder when moving the application to another computer. You can create a desktop
+shortcut to this executable. The batch worker runs through the same executable;
+no separate batch executable is needed.
+
+For a single-file executable instead:
+
+```powershell
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --hidden-import xlsxwriter --add-data "best_UNetDC_focal_model.pth;." main.py
+```
+
+Build on Windows to produce a Windows executable. The model is bundled as a
+read-only resource; results are saved outside the executable's temporary folder.
+
 ## Outputs
 
 The analysis creates files such as:
@@ -93,3 +108,22 @@ size_histogram.png
 This project root includes an MIT license for original project files unless an
 individual file says otherwise.
 
+
+## Result folders and filenames
+
+By default the GUI saves to `Documents/BlobInspector/results` in your home folder.
+Use Select Output Folder to choose another location. Each run gets a short,
+unique timestamp folder, for example `20261019_153000`; repeated runs keep the
+previous results. The Open Output Folder action opens the current run directly.
+Single-image and batch analyses use the same layout. Saved sessions default to
+`saved_analyses` and restored sessions to `loaded_analyses` under the selected
+results folder. Masks, source images, colored labels, overlays, CSV and Excel
+reports retain their existing names. Spatial Analysis exports stay in
+`spatial_analysis/<image_name>` inside the run folder.
+
+Image reads and writes support accented names and `µ` on Windows. The app checks
+that the output folder is writable before inference. Image writes use a temporary
+file followed by replacement, and failures include the destination path.
+CSV/Excel/plot exports use Python-aware paths already. If masks, overlays, Excel,
+or quantification are disabled in Settings, those optional files are not created.
+Keep the model and analysis settings used previously when comparing results.

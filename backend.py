@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import csv
+from datetime import datetime
 import shutil
 import sys
 import tempfile
 from pathlib import Path
 
 from app_models import AppSettings
-from config import SCRIPT_BASENAME, VALID_EXTS
+from config import DEFAULT_OUT_DIR, SCRIPT_BASENAME, VALID_EXTS
 
 
 def _is_tiff_path(path: Path) -> bool:
@@ -105,6 +106,24 @@ def read_csv_rows(path: Path) -> list[dict[str, str]]:
         return []
 
 
+def create_run_directory(output_text: str) -> Path:
+    """Create a short, unique run directory and check writes before inference."""
+    base = Path(output_text.strip()).expanduser() if output_text.strip() else Path(DEFAULT_OUT_DIR)
+    base = base.resolve()
+    base.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=base, prefix="write_check_"):
+        pass
+    stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    for index in range(10000):
+        target = base / (stamp if index == 0 else f"{stamp}_{index}")
+        try:
+            target.mkdir()
+            return target
+        except FileExistsError:
+            continue
+    raise OSError(f"Could not create a unique results folder in {base}")
+
+
 def prepare_run(
     *,
     folder_text: str,
@@ -116,9 +135,6 @@ def prepare_run(
     if not ckpt_path.is_file():
         raise ValueError("Checkpoint file does not exist.")
 
-    base_out_dir = Path(out_dir_text.strip()) if out_dir_text.strip() else Path("quant_results")
-    base_out_dir.mkdir(parents=True, exist_ok=True)
-
     folder_path = Path(folder_text.strip())
     if not folder_path.is_dir():
         raise ValueError("Please select a valid input folder.")
@@ -127,7 +143,7 @@ def prepare_run(
         raise ValueError("The selected folder contains no supported images.")
 
     input_dir = folder_path
-    out_dir = base_out_dir
+    out_dir = create_run_directory(out_dir_text)
 
     command = build_batch_command(
         input_dir=input_dir,
@@ -156,11 +172,7 @@ def prepare_single_image_run(
     if not ckpt_path.is_file():
         raise ValueError("Checkpoint file does not exist.")
 
-    base_out_dir = Path(out_dir_text.strip()) if out_dir_text.strip() else Path("quant_results")
-    base_out_dir.mkdir(parents=True, exist_ok=True)
-
-    single_out_dir = base_out_dir / "single_runs" / image_path.stem
-    single_out_dir.mkdir(parents=True, exist_ok=True)
+    single_out_dir = create_run_directory(out_dir_text)
 
     temp_input_dir = Path(tempfile.mkdtemp(prefix="segment_app_single_"))
     staged_image = temp_input_dir / image_path.name

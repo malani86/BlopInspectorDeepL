@@ -71,17 +71,8 @@ def colorize_labels(labeled: np.ndarray) -> np.ndarray:
     return rgb
 
 
-def save_image_unicode(path: Path, image: np.ndarray) -> None:
-    """Encode with OpenCV and write via Python to support Unicode paths."""
-    path = Path(path)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        success, encoded = cv2.imencode(path.suffix, image)
-        if not success:
-            raise OSError("OpenCV could not encode the image")
-        path.write_bytes(encoded.tobytes())
-    except (OSError, cv2.error) as exc:
-        raise OSError(f"Could not save image to {path}: {exc}") from exc
+# Keep the existing public import used by the batch pipeline.
+from file_io import save_image_unicode
 
 
 def save_label_maps(out_dir: Path, stem: str, labeled: np.ndarray) -> None:
