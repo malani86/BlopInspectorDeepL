@@ -9,6 +9,8 @@ from importlib import metadata
 
 REQUIRED_PACKAGES = [
     "numpy",
+    "scipy",
+    "joblib",
     "opencv-python",
     "pillow",
     "torch>=1.7",

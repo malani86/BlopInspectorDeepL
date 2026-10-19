@@ -10,7 +10,7 @@ def resource_path(relative_path: str) -> Path:
 SCRIPT_BASENAME = "quantify_droplets_batch"
 VALID_EXTS = {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
 DEFAULT_CHECKPOINT = resource_path("best_UNetDC_focal_model.pth")
-DEFAULT_OUT_DIR = "quant_results"
+DEFAULT_OUT_DIR = Path.home() / "Documents" / "BlobInspector" / "results"
 
 DEFAULT_BATCH_SIZE = 8
 DEFAULT_THRESHOLD = 0.3

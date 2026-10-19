@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 
 import cv2
+from file_io import read_image_unicode, save_image_unicode
 import numpy as np
 import pandas as pd
 from scipy import ndimage as ndi
@@ -242,8 +243,7 @@ def export_spatial(directory: Path, result: SpatialResult, mask: np.ndarray,
     from matplotlib.figure import Figure
 
     directory.mkdir(parents=True, exist_ok=True)
-    if not cv2.imwrite(str(directory / "region_mask.png"), result.region.astype(np.uint8) * 255):
-        raise OSError("Could not save the enclosing region mask.")
+    save_image_unicode(directory / "region_mask.png", result.region.astype(np.uint8) * 255)
     pd.DataFrame([result.summary]).to_csv(directory / "spatial_summary.csv", index=False)
     result.droplets.to_csv(directory / "spatial_droplets.csv", index=False)
     result.rings.to_csv(directory / "spatial_rings.csv", index=False)

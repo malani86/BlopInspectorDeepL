@@ -6,6 +6,7 @@ from pathlib import Path
 
 import cv2
 import matplotlib
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -26,8 +27,6 @@ from utils.data_loader import (
     ensure_training_rgb_uint8,
     preprocess_rgb_like_training,
 )
-
-matplotlib.use("Agg")
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 TIFF_MODE_CURRENT_SLICE = "current_slice"
@@ -520,12 +519,17 @@ def main() -> None:
     if overlay_dir is not None:
         overlay_dir.mkdir(exist_ok=True)
 
-    model = load_model(args.ckpt_path)
-
     input_images = sorted(
         path for path in input_dir.iterdir()
         if path.suffix.lower() in {".png", ".jpg", ".jpeg", ".tif", ".tiff"}
     )
+    if not input_images:
+        raise ValueError(f"No supported images found in {input_dir}")
+    stems = [path.stem.casefold() for path in input_images]
+    if len(stems) != len(set(stems)):
+        raise ValueError("Some input images have the same name without their extension. "
+                         "Rename them to unique names so their results cannot overwrite each other.")
+    model = load_model(args.ckpt_path)
     has_tiff_inputs = any(is_tiff_path(path) for path in input_images)
     print(f"Found {len(input_images)} input image(s).")
     print(f"Multi-slice TIFF mode: {args.tiff_mode}")

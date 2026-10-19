@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 import cv2
+from file_io import read_image_unicode, save_image_unicode
 import numpy as np
 import pandas as pd
 from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg, NavigationToolbar2QT
@@ -211,7 +212,7 @@ class SpatialAnalysisDialog(QDialog):
             parameters = json.loads(parameters_path.read_text(encoding="utf-8"))
             if parameters.get("format") != "segment_app_spatial":
                 return False
-            region = cv2.imread(str(self.output_dir / "region_mask.png"), cv2.IMREAD_GRAYSCALE)
+            region = read_image_unicode(str(self.output_dir / "region_mask.png"), cv2.IMREAD_GRAYSCALE)
             if region is None or region.shape != self.mask.shape or not np.any(region):
                 return False
             self.region = region > 0
@@ -264,7 +265,7 @@ class SpatialAnalysisDialog(QDialog):
         if not filename:
             return
         try:
-            region = cv2.imread(filename, cv2.IMREAD_UNCHANGED)
+            region = read_image_unicode(filename, cv2.IMREAD_UNCHANGED)
             if region is None:
                 raise ValueError("Could not read this region mask.")
             if region.ndim == 3:

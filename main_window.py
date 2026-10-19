@@ -7,6 +7,7 @@ import shlex
 from pathlib import Path
 
 import cv2
+from file_io import read_image_unicode, save_image_unicode
 import joblib
 import numpy as np
 import pandas as pd
@@ -905,7 +906,7 @@ class MainWindow(QMainWindow):
                 mask_path = masks[names.index(selected)]
             result_stem = (mask_path.stem.removesuffix("_pred") if mask_path.stem.endswith("_pred")
                            else mask_path.stem.removesuffix("_mask"))
-            mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+            mask = read_image_unicode(str(mask_path), cv2.IMREAD_GRAYSCALE)
             if mask is None:
                 raise ValueError("Could not read the saved detection mask.")
             csv_path = out_dir / f"{result_stem}_droplets.csv"
@@ -913,12 +914,12 @@ class MainWindow(QMainWindow):
                 raise ValueError("Enable Run quantification automatically and analyze again to create droplet measurements.")
             droplets = pd.read_csv(csv_path)
             source_path = out_dir / "source_images" / f"{result_stem}.png"
-            source_bgr = cv2.imread(str(source_path), cv2.IMREAD_COLOR) if source_path.exists() else None
+            source_bgr = read_image_unicode(str(source_path), cv2.IMREAD_COLOR) if source_path.exists() else None
             source = cv2.cvtColor(source_bgr, cv2.COLOR_BGR2RGB) if source_bgr is not None else original
             allow_automatic = source is not None and source.shape[:2] == mask.shape
             if not allow_automatic:
                 overlay_path = out_dir / "overlays" / f"{result_stem}_overlay.png"
-                overlay = cv2.imread(str(overlay_path), cv2.IMREAD_COLOR) if overlay_path.exists() else None
+                overlay = read_image_unicode(str(overlay_path), cv2.IMREAD_COLOR) if overlay_path.exists() else None
                 source = (cv2.cvtColor(overlay, cv2.COLOR_BGR2RGB)
                           if overlay is not None and overlay.shape[:2] == mask.shape
                           else np.repeat(mask[:, :, None], 3, axis=2))
@@ -1104,8 +1105,8 @@ class MainWindow(QMainWindow):
             QMessageBox.information(self, "Save analysis", "Run an analysis before saving.")
             return
 
-        analysis_dir = Path("analysis")
-        analysis_dir.mkdir(exist_ok=True)
+        analysis_dir = self.state.session.output_dir / "saved_analyses"
+        analysis_dir.mkdir(parents=True, exist_ok=True)
         default_name = datetime.now().strftime("%Y-%m-%d_%H-%M-%S_analysis.joblib")
         destination, _ = QFileDialog.getSaveFileName(
             self,
@@ -1131,7 +1132,7 @@ class MainWindow(QMainWindow):
         QMessageBox.information(self, "Save analysis", f"Analysis saved to:\n{destination_path}")
 
     def load_analysis(self) -> None:
-        analysis_dir = Path("analysis")
+        analysis_dir = self.state.session.output_dir / "saved_analyses"
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Load analysis",
@@ -1239,7 +1240,7 @@ class MainWindow(QMainWindow):
         if payload.get("format") != "segment_app_analysis":
             raise ValueError("This is not a segment_app analysis file.")
 
-        loaded_root = Path("quant_results") / "loaded_analyses"
+        loaded_root = self.state.session.output_dir / "loaded_analyses"
         loaded_root.mkdir(parents=True, exist_ok=True)
         base_name = analysis_path.stem.removesuffix("_analysis")
         out_dir = self._unique_directory(loaded_root, base_name)
@@ -1389,7 +1390,7 @@ class MainWindow(QMainWindow):
         summary_path = out_dir / "summary_per_image.csv"
         stats_path = out_dir / "droplet_size_stats.csv"
 
-        mask = cv2.imread(str(mask_path), cv2.IMREAD_GRAYSCALE)
+        mask = read_image_unicode(str(mask_path), cv2.IMREAD_GRAYSCALE)
         if mask is None:
             raise ValueError(f"Could not read mask: {mask_path}")
 
@@ -1403,7 +1404,7 @@ class MainWindow(QMainWindow):
 
         updated_mask = (mask > 0).astype(np.uint8)
         updated_mask[component_mask] = 0
-        cv2.imwrite(str(mask_path), updated_mask * 255)
+        save_image_unicode(str(mask_path), updated_mask * 255)
         if labeled is not None:
             labeled[component_mask] = 0
             save_label_maps(out_dir, result_stem, labeled)
@@ -1411,7 +1412,7 @@ class MainWindow(QMainWindow):
         if overlay_path.exists():
             overlay = self._build_corrected_overlay(updated_mask, result_stem, overlay_path)
             if overlay is not None:
-                cv2.imwrite(str(overlay_path), overlay)
+                save_image_unicode(str(overlay_path), overlay)
 
         self._remove_row_from_csv(droplet_csv_path, droplet)
         combined = self._remove_row_from_csv(all_droplets_path, droplet)
@@ -1436,7 +1437,7 @@ class MainWindow(QMainWindow):
     def _build_corrected_overlay(self, mask: np.ndarray, result_stem: str, overlay_path: Path) -> np.ndarray | None:
         source = self._source_image_for_result_stem(result_stem)
         if source is None:
-            source = cv2.imread(str(overlay_path), cv2.IMREAD_COLOR)
+            source = read_image_unicode(str(overlay_path), cv2.IMREAD_COLOR)
             if source is None:
                 return None
             green_pixels = (
@@ -1464,7 +1465,7 @@ class MainWindow(QMainWindow):
         if out_dir is not None:
             source_path = out_dir / "source_images" / f"{result_stem}.png"
             if source_path.exists():
-                source = cv2.imread(str(source_path), cv2.IMREAD_COLOR)
+                source = read_image_unicode(str(source_path), cv2.IMREAD_COLOR)
                 if source is not None:
                     return cv2.cvtColor(source, cv2.COLOR_BGR2RGB)
         selection = self.preview_service.get_preview_bundle(
