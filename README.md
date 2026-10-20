@@ -1,4 +1,4 @@
-# Lipid Droplet Segmentation Application(segment_appV1)
+# Lipid Droplet Segmentation Application(BlobInspectorDeepL)
 
 A PySide6 desktop application for segmenting and quantifying lipid droplets in
 microscopy images using a U-Net-dc model.
