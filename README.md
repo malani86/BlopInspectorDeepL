@@ -82,11 +82,23 @@ no separate batch executable is needed.
 For a single-file executable instead:
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --add-data "best_UNetDC_focal_model.pth;." main.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --add-data "best_UNetDC_focal_model.pth;." --add-data "icon.ico;." main.py
 ```
 
 Build on Windows to produce a Windows executable. The model is bundled as a
 read-only resource; results are saved outside the executable's temporary folder.
+
+### Application icon
+
+Keep `icon.ico` next to `main.py` when building. The build uses it for the
+executable and bundles a copy for the running application's window icon.
+The single-file command above includes both `--icon` and the icon's
+`--add-data` entry; both are needed for these two uses.
+
+After rebuilding, launch the new executable directly from `dist` first.
+If an existing desktop shortcut or taskbar pin still shows an old icon,
+recreate it from the new executable. For a desktop shortcut, you can also
+use **Properties > Shortcut > Change Icon** and select the new executable.
 
 ## Outputs
 
