@@ -82,7 +82,7 @@ no separate batch executable is needed.
 For a single-file executable instead:
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --hidden-import xlsxwriter --add-data "best_UNetDC_focal_model.pth;." main.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --add-data "best_UNetDC_focal_model.pth;." main.py
 ```
 
 Build on Windows to produce a Windows executable. The model is bundled as a
