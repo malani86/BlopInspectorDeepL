@@ -167,7 +167,7 @@ When transferring the application, copy the **entire `dist\segment_app` folder**
 ### Single-file build
 
 ```powershell
-python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --hidden-import xlsxwriter --add-data "best_UNetDC_focal_model.pth;." main.py
+python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --add-data "best_UNetDC_focal_model.pth;." --add-data "icon.ico;." main.py
 ```
 
 The resulting executable is `dist\segment_app.exe`. The model is bundled, and results are saved outside the executable's temporary extraction directory. The application starts its batch worker through the same executable; a separate batch-worker executable is unnecessary.

@@ -1,8 +1,10 @@
 import sys
 import os
 
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication
 
+from config import resource_path
 from main_window import MainWindow
 
 
@@ -25,7 +27,10 @@ def main() -> int:
         return 0
 
     app = QApplication(sys.argv)
+    app_icon = QIcon(str(resource_path("icon.ico")))
+    app.setWindowIcon(app_icon)
     window = MainWindow()
+    window.setWindowIcon(app_icon)
     window.show()
     return app.exec()
 
