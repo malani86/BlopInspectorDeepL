@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('best_UNetDC_focal_model.pth', '.')],
+    datas=[('best_UNetDC_focal_model.pth', '.'), ('icon.ico', '.')],
     hiddenimports=['xlsxwriter'],
     hookspath=[],
     hooksconfig={},
