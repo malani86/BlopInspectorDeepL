@@ -1,141 +1,215 @@
-# Lipid Droplet Segmentation Application(BlobInspectorDeepL)
+# BlobInspector Deep Learning
 
-A PySide6 desktop application for segmenting and quantifying lipid droplets in
-microscopy images using a U-Net-dc model.
+A desktop application for segmenting, counting, and measuring lipid droplets in microscopy images using a trained U-Net-DC model. The PySide6 interface supports single images, image folders, TIFF stacks, manual review, and spatial analysis.
 
 ## Features
 
-- Segment PNG, JPG, JPEG, TIFF, and TIFF stack images.
-- Choose TIFF current slice, max projection, or all slices.
-- Save predicted binary masks and green overlays.
-- Quantify droplets into per-image CSV, combined CSV, and Excel reports.
-- Show per-image summaries, total droplet count, and size statistics.
-- Manually delete incorrect droplets after segmentation.
-- Save and load analysis sessions as `.joblib` files.
+- Process PNG, JPG, JPEG, TIF, and TIFF images.
+- Analyze the current TIFF slice, a maximum-intensity projection, or every slice independently.
+- Review binary masks, colored droplet labels, and green overlays alongside the source image.
+- Separate touching droplets with optional watershed counting.
+- Export counts, areas, equivalent diameters, and centroids to CSV and Excel.
+- Remove incorrect detections from the results through the interface.
+- Measure droplet distribution within a region using spatial heatmaps and concentric zones.
+- Save and reopen analysis sessions.
 
-## Project Structure
+TIFF stack processing is **2D**: analyzing all slices does not reconstruct 3D objects or deduplicate droplets across slices.
+
+## Install and launch
+
+Use Python 3.10 or later with compatible versions of the dependencies in [requirements.txt](requirements.txt). The model uses CUDA when available and otherwise runs on the CPU.
+
+Download or clone this repository, then open a terminal in the folder containing `main.py`:
+
+```bash
+git clone https://github.com/malani86/BlopInspectorDeepL.git
+cd BlopInspectorDeepL
+```
+
+Create a virtual environment if you do not already have an application environment.
+
+**Windows PowerShell:**
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+```
+
+**Linux:**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+Place your compatible trained checkpoint, `best_UNetDC_focal_model.pth`, next to `main.py`, or select its location in **Settings > Checkpoint path**. The checkpoint must match the architecture in [models/model_2.py](models/model_2.py).
+
+Launch the application from the repository folder:
+
+```bash
+python main.py
+```
+
+## Analyze images
+
+1. Click **Open Image** for one file or **Open Folder** for supported images directly inside a folder. Subfolders are not scanned.
+2. Inspect the preview. For TIFF stacks, select a slice and choose the processing mode in **Settings**.
+3. Check the model, detection settings, and **Pixels per micron** calibration. Keep **Save masks**, **Save overlays**, and automatic quantification enabled for the complete review workflow.
+4. Choose **File > Select Output Folder**, or use the default location below.
+5. Click **Analyze**. Progress and errors appear in the log.
+6. Review **Original**, **Mask**, **Labels**, and **Overlay**, and inspect the measurements in the **Droplets** tab.
+7. Click **Open Output** to open the current run's files. Use **Save Analysis** to save a session for later.
+
+Press **F1** or open the **Help** menu for the detailed guides.
+
+### GUI defaults
+
+| Setting | Default |
+| --- | --- |
+| Model input size | 512 × 512 pixels |
+| Batch size | 8 |
+| Probability threshold | 0.3 |
+| Minimum connected-object area | 29 pixels², before watershed splitting |
+| Background-correction radius | 50 |
+| Pixels per micron | 5.0; replace with your microscope calibration |
+| Watershed counting | Enabled |
+| TIFF mode | Current slice |
+| TIFF PNG-style conversion | Enabled |
+| Masks, overlays, quantification, and Excel | Enabled |
+| Size histogram | Disabled |
+
+Masks are resized back to the processed image dimensions before measurement. Physical-unit measurements depend on the calibration you enter; the default value is not a calibration of your data.
+
+For TIFF inputs with PNG-style conversion disabled, the current pipeline substitutes a threshold of **0.88** when the requested threshold is **0.3**. Other requested thresholds are used directly.
+
+### Spatial analysis
+
+After segmentation and quantification, open **Analysis > Spatial Analysis...**. Define the surrounding region with the available outline tools or import a region mask. Inspect droplet coverage, local counts, mean area, and radial zones, then click **Export Spatial Results**.
+
+Exports are stored inside the run folder at `spatial_analysis/<image_name>/`. They include `region_mask.png`, `spatial_summary.csv`, `spatial_droplets.csv`, `spatial_rings.csv`, heatmap PNGs, and `parameters.json`.
+
+After deleting a droplet, reopen Spatial Analysis and export again. The application invalidates the previous spatial measurements while preserving the region outline. Manual deletion updates the detection outputs and CSV tables; existing Excel workbooks and size histograms are not regenerated by that action.
+
+## Where results are saved
+
+The GUI defaults to `Documents/BlobInspector/results` under your home directory. On Windows, this is typically:
 
 ```text
-segment_app/
-├── main.py                      application entry point
-├── main_window.py               main GUI window and user actions
-├── controller.py                app state and run request management
-├── backend.py                   command builder for batch segmentation
-├── workers.py                   background process runner
-├── quantify_droplets_batch.py   segmentation and quantification pipeline
-├── preview_service.py           loads original/mask/overlay previews
-├── imaging.py                   image and TIFF preview helpers
-├── app_models.py                shared dataclasses and constants
-├── config.py                    default settings
-├── widgets.py                   reusable GUI widgets
-├── models/                      neural network definitions
-└── utils/                       training/preprocessing/metrics helpers
+C:\Users\<username>\Documents\BlobInspector\results\20261019_153000\
 ```
 
-## Install
+Each GUI run creates a unique timestamp folder, preserving earlier runs. Single-image and folder analyses use the same layout. **Open Output** opens the current run directly.
 
-Create and activate a Python environment, then install the dependencies:
+| File or folder inside a run | Contents |
+| --- | --- |
+| `predicted_masks/*_pred.png` | Binary detection masks |
+| `labeled_maps/*_labels.npy` | Integer object-ID maps |
+| `labeled_maps/*_labels.png` | Colored droplet maps |
+| `source_images/*.png` | Source images used for review |
+| `overlays/*_overlay.png` | Green detection overlays |
+| `*_droplets.csv` | Measurements for each image or processed slice |
+| `all_droplets.csv` | Combined droplet measurements |
+| `summary_per_image.csv` | Per-image counts and detected areas, plus a total row |
+| `droplet_size_stats.csv` | Mean, median, and standard deviation of equivalent diameter |
+| `all_droplets.xlsx` | Droplet and per-image tables, when Excel export is enabled |
+| `size_histogram.png` | Size distribution, when enabled and size data exist |
+| `spatial_analysis/` | Spatial measurements and plots exported from the dialog |
+
+Optional outputs depend on your settings. Disabling mask saving also disables the saved source images and label maps needed for parts of the review workflow.
+
+**Save Analysis** defaults to `saved_analyses` under the selected results root and writes a `.joblib` session. **File > Load Analysis...** restores its embedded outputs under `loaded_analyses`. Export spatial results before saving a session if you want those exports included. Only load session files from sources you trust, because joblib uses Python object deserialization.
+
+Image I/O supports names containing characters such as `µ`, accents, and Arabic text. The GUI checks output-folder writability before inference, and image writes replace the destination only after encoding and writing the temporary image succeeds.
+
+## Run from the command line
+
+From the repository folder, this example explicitly selects the main GUI detection defaults:
 
 ```bash
-pip install -r requirements.txt
+python quantify_droplets_batch.py --img_dir "path/to/images" --ckpt_path "best_UNetDC_focal_model.pth" --out_dir "quant_results/run_001" --batch 8 --prob_thresh 0.3 --min_area 29 --resize_size 512 --background_radius 50 --px_per_micron 5 --use_watershed_count --tiff_as_png_style --save_overlays --skip_histogram
 ```
 
-## Run the GUI
+Replace the image path, output path, and calibration with your own values.
 
-```bash
-python segment_app/main.py
-```
+| Option | Purpose |
+| --- | --- |
+| `--tiff_mode current_slice --slice_index 0` | Process the first slice; the index is zero-based |
+| `--tiff_mode max_projection` | Segment a maximum-intensity projection |
+| `--tiff_mode all_slices` | Segment each slice independently |
+| `--skip_mask_save` | Disable masks and associated label/source exports |
+| `--skip_quantification` | Produce segmentation outputs without measurement tables |
+| `--skip_excel` | Disable the Excel workbook |
+| `--skip_histogram` | Disable the size histogram |
 
-## Run the Batch Script Directly
+The CLI uses the exact `--out_dir` you supply and does **not** add a timestamp folder. Choose a fresh folder for each run to preserve earlier outputs. CLI defaults also differ from the GUI: minimum area is 1 pixel², calibration is unset, and watershed, overlays, and TIFF PNG-style conversion require their flags.
 
-```bash
-python segment_app/quantify_droplets_batch.py \
-  --img_dir path/to/images \
-  --ckpt_path best_UNetDC_focal_model.pth \
-  --out_dir quant_results \
-  --save_overlays
-```
+## Build a Windows executable
 
-For TIFF stacks, useful options are:
+Build on Windows using the environment in which the application runs successfully. Keep `best_UNetDC_focal_model.pth` and `icon.ico` in the repository folder.
 
-```bash
---tiff_mode current_slice
---tiff_mode max_projection
---tiff_mode all_slices
---tiff_as_png_style
-```
-## Rebuild on Windows
-
-From the repository folder, with your application environment activated:
+### Folder build
 
 ```powershell
 python -m pip install -r requirements.txt
 python -m PyInstaller --noconfirm --clean segment_app.spec
 ```
 
-The trained `best_UNetDC_focal_model.pth` and `icon.ico` must be in this folder.
-Run `dist\segment_app\segment_app.exe`. Copy the **entire** `dist\segment_app`
-folder when moving the application to another computer. You can create a desktop
-shortcut to this executable. The batch worker runs through the same executable;
-no separate batch executable is needed.
+Launch:
 
-For a single-file executable instead:
+```powershell
+.\dist\segment_app\segment_app.exe
+```
+
+When transferring the application, copy the **entire `dist\segment_app` folder**. Create a desktop shortcut to `segment_app.exe` inside that folder.
+
+### Single-file build
 
 ```powershell
 python -m PyInstaller --noconfirm --clean --onefile --windowed --name segment_app --icon icon.ico --add-data "best_UNetDC_focal_model.pth;." --add-data "icon.ico;." main.py
 ```
 
-Build on Windows to produce a Windows executable. The model is bundled as a
-read-only resource; results are saved outside the executable's temporary folder.
+The resulting executable is `dist\segment_app.exe`. The model is bundled, and results are saved outside the executable's temporary extraction directory. The application starts its batch worker through the same executable; a separate batch-worker executable is unnecessary.
 
-### Application icon
+After updating source files, rebuild and launch the new executable. An existing `.exe` does not pick up Python source edits automatically.
 
-Keep `icon.ico` next to `main.py` when building. The build uses it for the
-executable and bundles a copy for the running application's window icon.
-The single-file command above includes both `--icon` and the icon's
-`--add-data` entry; both are needed for these two uses.
+## Troubleshooting
 
-After rebuilding, launch the new executable directly from `dist` first.
-If an existing desktop shortcut or taskbar pin still shows an old icon,
-recreate it from the new executable. For a desktop shortcut, you can also
-use **Properties > Shortcut > Change Icon** and select the new executable.
+| Problem | Check |
+| --- | --- |
+| Checkpoint missing or incompatible | Select the correct U-Net-DC `.pth` file in Settings; include it when building. |
+| Image or result cannot be saved | Read the destination path in the log, check free space and folder permissions, and rebuild if you are still running an older executable. |
+| Spatial Analysis cannot read a mask | Keep mask saving enabled, rerun with the updated application, and check that the current run contains `predicted_masks`. |
+| Two input images have the same stem | Rename files such as `image1.png` and `image1.tif` so their names before the extension are unique. |
+| Expected reports are missing | Check automatic quantification and export settings. Histogram output also requires measured size data. |
+| GPU memory error | Reduce the batch size in Settings. |
+| Application fails after being moved | For a folder build, copy the whole output folder, including its dependency files. |
 
-## Outputs
+## Source files and checks
 
-The analysis creates files such as:
+| File | Role |
+| --- | --- |
+| `main.py` | Application and packaged-worker entry point |
+| `main_window.py`, `widgets.py`, `help_dialog.py` | Interface, controls, and help |
+| `controller.py`, `app_models.py`, `config.py` | State, settings, and defaults |
+| `backend.py`, `workers.py` | Run-folder preparation and background processing |
+| `quantify_droplets_batch.py` | Inference, segmentation, and measurement exports |
+| `file_io.py`, `labeling.py` | Unicode-safe image I/O and droplet labels |
+| `imaging.py`, `preview_service.py` | Image loading and previews |
+| `spatial_analysis.py`, `spatial_dialog.py` | Spatial calculations, interface, and exports |
+| `models/`, `utils/` | Model architecture and preprocessing utilities |
+| `segment_app.spec` | PyInstaller folder-build configuration |
+| `tests/test_output_io.py` | Output regression tests |
 
-```text
-predicted_masks/*_pred.png
-overlays/*_overlay.png
-*_droplets.csv
-all_droplets.csv
-summary_per_image.csv
-droplet_size_stats.csv
-all_droplets.xlsx
-size_histogram.png
+Run the output tests from the repository folder:
+
+```bash
+python -m unittest discover -s tests -v
 ```
 
-## License Note
+These tests cover Unicode image/label/spatial exports, preservation of an existing image when replacement fails, and unique run folders. They do not validate model accuracy or replace testing the rebuilt Windows executable.
 
-This project root includes an MIT license for original project files unless an
-individual file says otherwise.
+## License
 
-
-## Result folders and filenames
-
-By default the GUI saves to `Documents/BlobInspector/results` in your home folder.
-Use Select Output Folder to choose another location. Each run gets a short,
-unique timestamp folder, for example `20261019_153000`; repeated runs keep the
-previous results. The Open Output Folder action opens the current run directly.
-Single-image and batch analyses use the same layout. Saved sessions default to
-`saved_analyses` and restored sessions to `loaded_analyses` under the selected
-results folder. Masks, source images, colored labels, overlays, CSV and Excel
-reports retain their existing names. Spatial Analysis exports stay in
-`spatial_analysis/<image_name>` inside the run folder.
-
-Image reads and writes support accented names and `µ` on Windows. The app checks
-that the output folder is writable before inference. Image writes use a temporary
-file followed by replacement, and failures include the destination path.
-CSV/Excel/plot exports use Python-aware paths already. If masks, overlays, Excel,
-or quantification are disabled in Settings, those optional files are not created.
-Keep the model and analysis settings used previously when comparing results.
+Original project files are licensed under the [MIT License](LICENSE), unless an individual file states otherwise. Dependencies retain their own licenses.
